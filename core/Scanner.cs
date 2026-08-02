@@ -9,8 +9,8 @@ namespace core
     {
         private const int MaxPort = 65535;
         private const int MinPort = 1;
-        private const int DefaultTimeout = 1000; // in milliseconds
-        private const int DefaultConcurrency = 500; // Default number of concurrent tasks
+        private const int DefaultTimeout = 500; // in milliseconds
+        private const int DefaultConcurrency = 300; // Default number of concurrent tasks
         private readonly string _host;
         private readonly int _startPort;
         private readonly int _endPort;
