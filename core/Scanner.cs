@@ -15,6 +15,7 @@ namespace core
         private readonly int _startPort;
         private readonly int _endPort;
         private readonly int _timeout;
+        private readonly Message _message;
 
         public Scanner(string host, int startPort, int endPort, int timeout = DefaultTimeout)
         {
@@ -22,6 +23,7 @@ namespace core
             _startPort = startPort;
             _endPort = endPort;
             _timeout = timeout;
+            _message = new Message();
         }
 
 
