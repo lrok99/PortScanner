@@ -18,11 +18,26 @@ public class Message
 		await _writer.WriteAsync(message);
 	}
 
-	public async Task StartConsumingAsync(CancellationToken cancellationToken = default)
-	{
-		var message = await _reader.ReadAsync();
-		Console.WriteLine(message);
-	}
+    public async Task StartConsumingAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await foreach (var message in _reader.ReadAllAsync(cancellationToken))
+            {
+                Console.WriteLine($"Received message: {message}");
+            }
 
-	public bool Complete() => _writer.TryComplete();
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("Message consumption canceled.");
+        }
+        catch (ChannelClosedException)
+        {
+            Console.WriteLine("Channel closed.");
+        }
+    }
+
+
+    public bool Complete() => _writer.TryComplete();
 }

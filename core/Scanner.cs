@@ -30,7 +30,7 @@ namespace core
         public async Task StartScanningAsync()
         {
             var _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(DefaultConcurrency << 1));
-
+            var consumingTask = _message.StartConsumingAsync();
             var readTask = new Task[DefaultConcurrency];
             for (int i = 0; i < DefaultConcurrency; i++)
             {
@@ -38,6 +38,8 @@ namespace core
             }
             var writeTask = WriteToChannelAsync(_channel.Writer);
             await Task.WhenAll(writeTask, Task.WhenAll(readTask));
+            _message.Complete();
+            await consumingTask;
         }
 
         private async Task WriteToChannelAsync(ChannelWriter<int> writer)
@@ -80,7 +82,7 @@ namespace core
             {
                     
                 await client.ConnectAsync(_host, port, cts.Token);
-                Console.WriteLine($"Port {port} is open.");
+                await _message.SendMessageAsync($"Port {port} is open on {_host}");
             }
             catch(OperationCanceledException)
             {
