@@ -16,10 +16,11 @@ namespace core
         private readonly int _startPort;
         private readonly int _endPort;
         private readonly int _timeout;
+        private readonly int _concurrency;
         private readonly Message _message;
         private long _finishedCount = 0;
 
-        public Scanner(string host, int startPort, int endPort, int timeout = DefaultTimeout)
+        public Scanner(string host, int startPort, int endPort, int timeout = DefaultTimeout, int concurrency = DefaultConcurrency)
         {
             if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("host cannot be null or empty", nameof(host));
             if (startPort < MinPort || startPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(startPort));
@@ -31,12 +32,13 @@ namespace core
             _endPort = endPort;
             _timeout = timeout;
             _message = new Message();
+            _concurrency = concurrency;
         }
 
 
         public async Task StartScanningAsync()
         {
-            var options = new BoundedChannelOptions(DefaultConcurrency << 1)
+            var options = new BoundedChannelOptions(_concurrency << 1)
             {
                 SingleReader = false,
                 SingleWriter = true,
