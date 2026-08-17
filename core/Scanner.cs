@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Channels;
 using System.Net.Sockets;
 using System.Threading;
-namespace core
+namespace PortScanner.core
 {
     public sealed class Scanner
     {
@@ -36,7 +36,7 @@ namespace core
         }
 
 
-        public async Task StartScanningAsync()
+        public async Task StartScanningAsync(CancellationToken cancellationToken = default)
         {
             var options = new BoundedChannelOptions(_concurrency << 1)
             {
@@ -46,31 +46,37 @@ namespace core
             };
             var _channel = Channel.CreateBounded<int>(options);
             Console.CursorVisible = false;
-            var consumingTask = _message.StartConsumingAsync();
+            var consumingTask = _message.StartConsumingAsync(cancellationToken);
 
-            var readTasks = Enumerable.Range(0, DefaultConcurrency).Select(_ => ReadFromChannelAsync(_channel.Reader)).ToArray();
-            var writeTask = WriteToChannelAsync(_channel.Writer);
-            var showProcessTask = ShowProcessAsync(_channel.Reader);
+            var readTasks = Enumerable.Range(0, _concurrency).Select(_ => ReadFromChannelAsync(_channel.Reader, cancellationToken)).ToArray();
+            var writeTask = WriteToChannelAsync(_channel.Writer, cancellationToken);
+            var showProcessTask = ShowProcessAsync(_channel.Reader, cancellationToken);
             try
             {
                 await Task.WhenAll(writeTask, Task.WhenAll(readTasks));
             }
-            finally {
+            finally
+            {
                 _message.Complete();
+                try
+                {
+                    await consumingTask;
+                }
+                catch (OperationCanceledException) { }
+                catch { }
+                Console.CursorVisible = true;
             }
-            //await consumingTask;
-
-            await Task.WhenAll(consumingTask,showProcessTask);
-            Console.CursorVisible= true;
+            await showProcessTask;
         }
 
-        private async Task WriteToChannelAsync(ChannelWriter<int> writer)
+        private async Task WriteToChannelAsync(ChannelWriter<int> writer, CancellationToken cancellationToken = default)
         {
             try
             {
                 foreach (var port in Enumerable.Range(_startPort, _endPort - _startPort + 1))
                 {
-                    await writer.WriteAsync(port);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await writer.WriteAsync(port, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -82,13 +88,13 @@ namespace core
                 writer.Complete();
             }
         }
-        private async Task ReadFromChannelAsync(ChannelReader<int> reader)
+        private async Task ReadFromChannelAsync(ChannelReader<int> reader, CancellationToken cancellationToken = default)
         {
             try
             {
-                await foreach (var port in reader.ReadAllAsync())
+                await foreach (var port in reader.ReadAllAsync(cancellationToken))
                 {
-                    await CheckPortAsync(port);
+                    await CheckPortAsync(port, cancellationToken);
                     Interlocked.Increment(ref _finishedCount);
                 }
             }
@@ -97,14 +103,14 @@ namespace core
                 //Console.WriteLine($"Error reading from channel: {ex.Message}");
             }
         }
-        private async Task CheckPortAsync(int port)
+        private async Task CheckPortAsync(int port, CancellationToken cancellationToken = default)
         {
             using var client = new TcpClient();
-            using var cts = new CancellationTokenSource(_timeout);
+            using var timeoutCts = new CancellationTokenSource(_timeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
             try
             {
-                    
-                await client.ConnectAsync(_host, port, cts.Token);
+                await client.ConnectAsync(_host, port, linkedCts.Token);
                 //await _message.SendMessageAsync($"Port {port} is open on {_host}");
             }
             catch(OperationCanceledException)
@@ -136,7 +142,7 @@ namespace core
         }
 
 
-        private async Task ShowProcessAsync(ChannelReader<int> reader)
+        private async Task ShowProcessAsync(ChannelReader<int> reader, CancellationToken cancellationToken = default)
         {
             int totalPorts = _endPort - _startPort + 1;
             const int barLength = 30;
@@ -155,10 +161,10 @@ namespace core
             }
 
             // Loop to update progress periodically
-            while (!reader.Completion.IsCompleted || Interlocked.Read(ref _finishedCount) < totalPorts)
+            while ((!reader.Completion.IsCompleted || Interlocked.Read(ref _finishedCount) < totalPorts) && !cancellationToken.IsCancellationRequested)
             {
                 UpdateProgress();
-                await Task.Delay(100);
+                try { await Task.Delay(100, cancellationToken); } catch (OperationCanceledException) { break; }
             }
 
             // One final update to ensure 100% is shown

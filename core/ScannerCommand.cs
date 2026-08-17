@@ -1,8 +1,13 @@
-﻿using core;
+﻿
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.Text;
+using System.Net;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.CommandLine.Parsing;
 
 namespace PortScanner.core
 {
@@ -32,16 +37,22 @@ namespace PortScanner.core
             var timeout = GetValue<int>(parseResult, "--timeout");
             var concurrency = GetValue<int>(parseResult, "--concurrency");
             var output = GetValue<string>(parseResult, "--output");
+            
             if(startPort > endPort)
             {
                 Console.WriteLine("Error: Start port cannot be greater than end port.");
                 return 1;
             }
-
+            var resolvedHost = await ResolveHostAsync(host);
+            if (resolvedHost == null) 
+            { 
+                Console.WriteLine($"Error: Unable to resolve host '{host}' to an IP address."); 
+                return 1;
+            }
             try
             {
                 var scanner = new Scanner(host, startPort, endPort, timeout, concurrency);
-                await scanner.StartScanningAsync();
+                await scanner.StartScanningAsync(cancellationToken);
 
             }
             catch (Exception ex)
@@ -59,6 +70,24 @@ namespace PortScanner.core
             if(!_aliasMap.TryGetValue(alias, out var option)) return default!;
             var result = parseResult.GetResult(option);
             return result is null ? default! : result.GetValueOrDefault<T>();
+        }
+
+        private async Task<IPAddress> ResolveHostAsync(string host)
+        {
+            try
+            {
+                if(IPAddress.TryParse(host, out var result))
+                {
+                    return result;
+                }
+                var hostAddress = await Dns.GetHostAddressesAsync(host);
+                
+                return hostAddress.FirstOrDefault(e=>e.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)??throw new Exception($"No valid IP address found for host: {host}");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to resolve host '{host}': {ex.Message}");
+            }
         }
     }
 }

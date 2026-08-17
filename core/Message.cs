@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Channels;
-namespace core;
+namespace PortScanner.core;
 public class Message
 {
 	private readonly Channel<string> _channel;

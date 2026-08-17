@@ -79,14 +79,25 @@ namespace PortScanner.core
                 CustomParser = parseResult =>
                 {
                     var concurrency = parseResult.GetValueOrDefault<int>();
-                    if (concurrency < 1)
+                    if (concurrency < 1 || concurrency > 1000)
                     {
-                        parseResult.AddError("Concurrency must be a positive integer.");
+                        parseResult.AddError("Concurrency must be a positive integer between 1 and 1000.");
                     }
                     return concurrency;
                 },
             };
             return builder.AddOption(timeoutOption).AddOption(concurrencyOption);
+        }
+
+        public static ScannerCommandBuilder AddOutputOption(this ScannerCommandBuilder builder)
+        {
+            var outputOption = new Option<string>("--output")
+            {
+                Aliases = { "-o" },
+                Description = "The output file to save the scan results.",
+                DefaultValueFactory = parseResult => Environment.CurrentDirectory,
+            };
+            return builder.AddOption(outputOption);
         }
 
     }
