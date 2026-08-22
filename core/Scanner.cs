@@ -20,19 +20,19 @@ namespace PortScanner.core
         private readonly Message _message;
         private long _finishedCount = 0;
 
-        public Scanner(string host, int startPort, int endPort, int timeout = DefaultTimeout, int concurrency = DefaultConcurrency)
+        public Scanner(ScannerOption option)
         {
-            if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("host cannot be null or empty", nameof(host));
-            if (startPort < MinPort || startPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(startPort));
-            if (endPort < MinPort || endPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(endPort));
-            if (startPort > endPort) throw new ArgumentException("startPort must be less than or equal to endPort");
+            if (string.IsNullOrWhiteSpace(option.Host)) throw new ArgumentException("host cannot be null or empty", nameof(option.Host));
+            if (option.StartPort < MinPort || option.StartPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(option.StartPort));
+            if (option.EndPort < MinPort || option.EndPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(option.EndPort));
+            if (option.StartPort > option.EndPort) throw new ArgumentException("startPort must be less than or equal to endPort");
 
-            _host = host;
-            _startPort = startPort;
-            _endPort = endPort;
-            _timeout = timeout;
+            _host = option.Host;
+            _startPort = option.StartPort;
+            _endPort = option.EndPort;
+            _timeout = option.Timeout;
             _message = new Message();
-            _concurrency = concurrency;
+            _concurrency = option.Concurrency;
         }
 
 

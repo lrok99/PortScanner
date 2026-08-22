@@ -51,7 +51,17 @@ namespace PortScanner.core
             }
             try
             {
-                var scanner = new Scanner(host, startPort, endPort, timeout, concurrency);
+                var scannerOption = new ScannerOption
+                {
+                    Host = resolvedHost.ToString(),
+                    StartPort = startPort,
+                    EndPort = endPort,
+                    Timeout = timeout,
+                    Concurrency = concurrency,
+                    Output = output
+                };
+                var scanner = new Scanner(scannerOption);
+                Console.WriteLine("Starting port scan...");
                 await scanner.StartScanningAsync(cancellationToken);
 
             }

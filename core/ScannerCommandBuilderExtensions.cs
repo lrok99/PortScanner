@@ -97,6 +97,8 @@ namespace PortScanner.core
                 Description = "The output file to save the scan results.",
                 DefaultValueFactory = parseResult => Environment.CurrentDirectory,
             };
+
+            
             return builder.AddOption(outputOption);
         }
 
