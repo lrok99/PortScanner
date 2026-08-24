@@ -14,15 +14,15 @@ namespace PortScanner.core
     public class ScannerCommand
     {
         private readonly RootCommand _rootCommand;
-        private readonly List<Option> _options;
+        private readonly IList<Option> _options;
         private readonly Dictionary<string, Option> _aliasMap;
 
-        public ScannerCommand(RootCommand rootCommand, List<Option> options) 
+        public ScannerCommand(RootCommand rootCommand, IList<Option> options) 
         {
             _rootCommand = rootCommand;
             _options = options;
             _aliasMap = _options
-                        .Where(e => e.Aliases != null && e.Aliases.Any())
+                        .Where(e => e.Aliases != null)
                         .SelectMany(o => new[] { o.Name }.Concat(o.Aliases ?? Enumerable.Empty<string>()), (o, alias) => new { Alias = alias, Option = o })
                         .ToDictionary(x => x.Alias, x => x.Option);
         }
@@ -32,7 +32,14 @@ namespace PortScanner.core
         public async Task<int> ExecuteAsync(ParseResult parseResult, CancellationToken cancellationToken)
         {
             var host = GetValue<string>(parseResult, "--host");
+
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                Console.WriteLine("Error: Host is required.");
+                return 1;
+            }
             var startPort = GetValue<int>(parseResult, "--start-port");
+
             var endPort = GetValue<int>(parseResult, "--end-port");
             var timeout = GetValue<int>(parseResult, "--timeout");
             var concurrency = GetValue<int>(parseResult, "--concurrency");
@@ -51,16 +58,9 @@ namespace PortScanner.core
             }
             try
             {
-                var scannerOption = new ScannerOption
-                {
-                    Host = resolvedHost.ToString(),
-                    StartPort = startPort,
-                    EndPort = endPort,
-                    Timeout = timeout,
-                    Concurrency = concurrency,
-                    Output = output
-                };
+                var scannerOption = parseResult.Bind<ScannerOption>();
                 var scanner = new Scanner(scannerOption);
+
                 Console.WriteLine("Starting port scan...");
                 await scanner.StartScanningAsync(cancellationToken);
 
@@ -84,15 +84,21 @@ namespace PortScanner.core
 
         private async Task<IPAddress> ResolveHostAsync(string host)
         {
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                throw new ArgumentException("Host cannot be null or empty", nameof(host));
+            }
+
             try
             {
-                if(IPAddress.TryParse(host, out var result))
+                if (IPAddress.TryParse(host, out var result))
                 {
                     return result;
                 }
+
                 var hostAddress = await Dns.GetHostAddressesAsync(host);
-                
-                return hostAddress.FirstOrDefault(e=>e.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)??throw new Exception($"No valid IP address found for host: {host}");
+
+                return hostAddress.FirstOrDefault(e => e.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) ?? throw new Exception($"No valid IP address found for host: {host}");
             }
             catch (Exception ex)
             {

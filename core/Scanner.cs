@@ -111,7 +111,7 @@ namespace PortScanner.core
             try
             {
                 await client.ConnectAsync(_host, port, linkedCts.Token);
-                //await _message.SendMessageAsync($"Port {port} is open on {_host}");
+                await _message.SendMessageAsync($"Port {port} is open on {_host}");
             }
             catch(OperationCanceledException)
             {

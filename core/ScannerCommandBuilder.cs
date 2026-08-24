@@ -10,11 +10,13 @@ namespace PortScanner.core
     public class ScannerCommandBuilder
     {
         private readonly RootCommand _rootCommand;
-        private readonly List<Option> _options = new List<Option>();
+        private readonly IList<Option> _options;
 
         public ScannerCommandBuilder(string description = "This is a simple Port Scanner CLI application.")
         {
-            _rootCommand = new RootCommand(description);
+            _rootCommand = CommandLineBinder.
+                BuildCommand<ScannerOption>(description);
+            _options = _rootCommand.Options;
         }
 
         public ScannerCommandBuilder AddOption(Option option)

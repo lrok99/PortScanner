@@ -8,7 +8,7 @@ namespace PortScanner
     {
         static async Task<int> Main(string[] args)
         {
-            var command = new ScannerCommandBuilder().AddTargetOption().AddTExecutionOption().AddOutputOption().Build();
+            var command = new ScannerCommandBuilder().Build();
 
             var parseResult = command.RootCommand.Parse(args);
             if(parseResult.Errors.Count > 0)
