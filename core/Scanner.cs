@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Channels;
 using System.Net.Sockets;
 using System.Threading;
+using System.Collections.Concurrent;
 namespace PortScanner.core
 {
     public sealed class Scanner
@@ -17,8 +18,10 @@ namespace PortScanner.core
         private readonly int _endPort;
         private readonly int _timeout;
         private readonly int _concurrency;
+        private readonly string? _outputFile;
         private readonly Message _message;
         private long _finishedCount = 0;
+        private ConcurrentQueue<string> _messages = new ConcurrentQueue<string>();
 
         public Scanner(ScannerOption option)
         {
@@ -26,6 +29,7 @@ namespace PortScanner.core
             if (option.StartPort < MinPort || option.StartPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(option.StartPort));
             if (option.EndPort < MinPort || option.EndPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(option.EndPort));
             if (option.StartPort > option.EndPort) throw new ArgumentException("startPort must be less than or equal to endPort");
+            
 
             _host = option.Host;
             _startPort = option.StartPort;
@@ -33,6 +37,7 @@ namespace PortScanner.core
             _timeout = option.Timeout;
             _message = new Message();
             _concurrency = option.Concurrency;
+            _outputFile = option.Output;
         }
 
 
@@ -61,12 +66,17 @@ namespace PortScanner.core
                 try
                 {
                     await consumingTask;
+                    //output file
                 }
                 catch (OperationCanceledException) { }
                 catch { }
                 Console.CursorVisible = true;
             }
             await showProcessTask;
+            while(_messages.TryDequeue(out var message))
+            {
+                Console.WriteLine(message);
+            }
         }
 
         private async Task WriteToChannelAsync(ChannelWriter<int> writer, CancellationToken cancellationToken = default)
@@ -111,7 +121,8 @@ namespace PortScanner.core
             try
             {
                 await client.ConnectAsync(_host, port, linkedCts.Token);
-                await _message.SendMessageAsync($"Port {port} is open on {_host}");
+                _messages.Enqueue($"Port {port} is open on {_host}");
+                //await _message.SendMessageAsync($"Port {port} is open on {_host}");
             }
             catch(OperationCanceledException)
             {

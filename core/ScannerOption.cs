@@ -20,26 +20,5 @@ namespace PortScanner.core
         [Command(Name = "--output", Aliases = new[] { "-o" }, Description = "The output file path")]
         public string? Output { get; init; }
 
-        //public ScannerOption(string host, int startPort, int endPort, int timeout = 500, int concurrency = 200, string? output = null)
-        //{
-        //    if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("host cannot be null or empty", nameof(host));
-        //    if (startPort < MinPort || startPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(startPort));
-        //    if (endPort < MinPort || endPort > MaxPort) throw new ArgumentOutOfRangeException(nameof(endPort));
-        //    if (startPort > endPort) throw new ArgumentException("startPort must be less than or equal to endPort");
-        //    if (timeout < 1) throw new ArgumentOutOfRangeException(nameof(timeout));
-        //    if (concurrency < 1) throw new ArgumentOutOfRangeException(nameof(concurrency));
-
-        //    Host = host;
-        //    StartPort = startPort;
-        //    EndPort = endPort;
-        //    Timeout = timeout;
-        //    Concurrency = concurrency;
-        //    Output = output;
-        //}
-
-        //public ScannerOption()
-        //{
-
-        //}
     }
 }
